@@ -1,0 +1,38 @@
+# docker-compose tối thiểu cho module chatbot (GĐ1) — §9.2.
+# Kafka & Elasticsearch KHÔNG có trong luồng chat đồng bộ nên loại khỏi đây (§9.2).
+services:
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: roomfinder
+    ports: ["3306:3306"]
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+
+  app:
+    build: .
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: roomfinder
+      DB_USER: root
+      DB_PASSWORD: root
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      # Cấp GEMINI_API_KEY từ shell: `export GEMINI_API_KEY=...` trước khi up.
+      # Nếu để trống, NLU/NLG tự fallback rule-based/template (vẫn chạy được).
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+    ports: ["8080:8080"]
