@@ -152,10 +152,14 @@ public class ChatOrchestrator {
             hallucination = out.hallucinationDetected();
             if (out.valid()) {
                 reply = out.reply();
+                path = "LLM";
             } else {
+                // LLM lỗi hoặc guardrail chặn → câu trả lời thực tế là template.
+                // Ghi TEMPLATE để metric không báo "LLM" khi LLM không hề chạy;
+                // hallucination_flag phân biệt guardrail chặn (true) vs LLM lỗi (false).
                 reply = listReply(rooms, af, rr.getRelaxationNote());   // fallback an toàn
+                path = "TEMPLATE";
             }
-            path = "LLM";
         }
 
         contextService.save(ctx);
@@ -168,6 +172,9 @@ public class ChatOrchestrator {
 
     private ChatResponse handleRoomDetail(ChatContext ctx, NluResult nlu, String sessionId, long t0) {
         List<Room> refs = resolveRefs(ctx, nlu);
+        if (refs.isEmpty() && namedARoom(nlu)) {
+            return simpleReply(ctx, nlu, sessionId, t0, unresolvedRefReply(ctx));
+        }
         if (refs.isEmpty()) {
             return simpleReply(ctx, nlu, sessionId, t0,
                     "Bạn muốn xem chi tiết phòng nào? Hãy nói \"phòng số 1\", \"phòng số 2\"... nhé.");
@@ -187,8 +194,11 @@ public class ChatOrchestrator {
 
     private ChatResponse handleCompare(ChatContext ctx, NluResult nlu, String sessionId, long t0) {
         List<Room> refs = resolveRefs(ctx, nlu);
+        if (refs.size() < 2 && namedARoom(nlu)) {
+            return simpleReply(ctx, nlu, sessionId, t0, unresolvedRefReply(ctx));
+        }
         if (refs.size() < 2) {
-            // mặc định so sánh 2 phòng đầu trong kết quả trước
+            // Người dùng không chỉ định phòng nào → mặc định 2 phòng đầu kết quả trước.
             refs = topN(ctx, 2);
         }
         if (refs.size() < 2) {
@@ -211,6 +221,11 @@ public class ChatOrchestrator {
 
     private ChatResponse handleCalculateCost(ChatContext ctx, NluResult nlu, String sessionId, long t0) {
         List<Room> refs = resolveRefs(ctx, nlu);
+        // Người dùng ĐÃ nói rõ phòng nào mà không phân giải được → hỏi lại.
+        // Rơi về topN ở đây sẽ trả lời tự tin về SAI phòng (xem unresolvedRefReply).
+        if (refs.isEmpty() && namedARoom(nlu)) {
+            return simpleReply(ctx, nlu, sessionId, t0, unresolvedRefReply(ctx));
+        }
         if (refs.isEmpty()) refs = topN(ctx, 1);
         if (refs.isEmpty()) {
             return simpleReply(ctx, nlu, sessionId, t0,
@@ -277,6 +292,27 @@ public class ChatOrchestrator {
         }
         return String.format("Mình tìm được %d phòng phù hợp với yêu cầu của bạn (%s). Bạn xem thử nhé:",
                 rooms.size(), af.summary());
+    }
+
+    /** Người dùng có chỉ đích danh phòng nào không (dù có phân giải được hay không)? */
+    private boolean namedARoom(NluResult nlu) {
+        List<Integer> refs = nlu.getEntities().getRoomRefs();
+        return refs != null && !refs.isEmpty();
+    }
+
+    /**
+     * Khi người dùng nhắc một phòng mà không phân giải được: hỏi lại thay vì
+     * đoán. Đoán ở đây tạo ra câu trả lời SAI mà nghe vẫn tự tin — người dùng
+     * không có cách nào biết bot vừa đổi sang phòng khác.
+     */
+    private String unresolvedRefReply(ChatContext ctx) {
+        List<Long> last = ctx.getLastResultIds();
+        if (last == null || last.isEmpty()) {
+            return "Bạn cho mình biết phòng nào nhé — hãy tìm phòng trước rồi nói \"phòng 1\", \"phòng 2\"...";
+        }
+        return String.format(
+                "Mình chưa rõ bạn muốn nói phòng nào. Danh sách vừa rồi có %d phòng, "
+                        + "bạn nói giúp mình \"phòng 1\"… \"phòng %d\" nhé.", last.size(), last.size());
     }
 
     /** Giải nghĩa room_refs (ordinal 1-based) theo last_result_ids trong context. */

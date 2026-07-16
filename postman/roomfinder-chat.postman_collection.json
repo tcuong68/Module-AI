@@ -1,0 +1,336 @@
+{
+  "info": {
+    "name": "RoomFinder Chatbot API",
+    "description": "Collection test cho module Chatbot AI tìm phòng trọ (GĐ1). Import cùng với environment (base_url=http://localhost:8081).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8081" }
+  ],
+  "item": [
+    {
+      "name": "00 - Docker Smoke Test",
+      "description": "Chi dung request HTTP (khong can PowerShell/curl) de xac nhan 3 container app/mysql/redis dang chay dung. Chay lan luot tu tren xuong, xem tab 'Test Results' cua tung request de biet PASS/FAIL.",
+      "item": [
+        {
+          "name": "00.1 - App container: health check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/api/v1/chat/health", "host": ["{{base_url}}"], "path": ["api","v1","chat","health"] },
+            "description": "App container (Spring Boot) da start va Tomcat dang lang nghe."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('status = UP', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.status).to.eql('UP');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "00.2 - MySQL container: tim phong (doc du lieu that)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": \"docker-check\",\n  \"message\": \"Tìm phòng dưới 5 triệu ở Thanh Xuân\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/chat", "host": ["{{base_url}}"], "path": ["api","v1","chat"] },
+            "description": "Neu MySQL container khong chay hoac chua co du lieu, request nay se loi 500 hoac tra ve mang rooms rong."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200 (MySQL query khong loi)', () => pm.response.to.have.status(200));",
+                  "pm.test('Co it nhat 1 phong tra ve (MySQL co du lieu)', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.rooms).to.be.an('array').that.is.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "00.3 - Redis container: buoc 1 - ghi context (SET)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": \"docker-check-redis\",\n  \"message\": \"Tìm phòng dưới 3 triệu\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/chat", "host": ["{{base_url}}"], "path": ["api","v1","chat"] },
+            "description": "Luot 1: dat price_max=3000000 vao context, luu vao Redis key chat:session:docker-check-redis."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('active_filters.price_max = 3000000', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.active_filters.price_max).to.eql(3000000);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "00.4 - Redis container: buoc 2 - doc lai context (GET, khong nhac lai gia)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": \"docker-check-redis\",\n  \"message\": \"Có điều hòa nữa\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/chat", "host": ["{{base_url}}"], "path": ["api","v1","chat"] },
+            "description": "Cau nay KHONG nhac lai gia. Neu price_max=3000000 van con trong active_filters => Redis da luu va doc lai dung context tu luot 00.3 (chay ngay sau 00.3, cung session_id)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Redis con nho price_max=3000000 tu luot truoc (context MERGE)', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.active_filters.price_max).to.eql(3000000);",
+                  "});",
+                  "pm.test('Redis MERGE them utilities=air_conditioner', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.active_filters.utilities).to.include('air_conditioner');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "00.5 - Redis container: xoa context (DEL)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": \"docker-check-redis\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/chat/reset", "host": ["{{base_url}}"], "path": ["api","v1","chat","reset"] },
+            "description": "Xoa key chat:session:docker-check-redis khoi Redis."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('ok = true', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.ok).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "00.6 - Redis container: xac nhan da xoa (context rong)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": \"docker-check-redis\",\n  \"message\": \"Có điều hòa nữa\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/chat", "host": ["{{base_url}}"], "path": ["api","v1","chat"] },
+            "description": "Gui lai dung cau khong co gia. Neu price_max KHONG con 3000000 nua => chung minh 00.5 da xoa that trong Redis (khong phai app tu cache)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('price_max KHONG con (Redis da xoa context that su)', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.active_filters.price_max).to.be.undefined;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Health check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": { "raw": "{{base_url}}/api/v1/chat/health", "host": ["{{base_url}}"], "path": ["api","v1","chat","health"] }
+      }
+    },
+    {
+      "name": "01 - Fast-path: tim phong duoi 3 trieu o Thanh Xuan",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"session_id\": \"demo-1\",\n  \"message\": \"Tìm phòng dưới 3 triệu ở Thanh Xuân\"\n}"
+        },
+        "url": { "raw": "{{base_url}}/api/v1/chat", "host": ["{{base_url}}"], "path": ["api","v1","chat"] },
+        "description": "Ky vong meta.path = FAST, tra ve room co price <= 3.000.000, district Thanh Xuan."
+      }
+    },
+    {
+      "name": "02 - MERGE: co dieu hoa nua (cung session demo-1)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"session_id\": \"demo-1\",\n  \"message\": \"Có điều hòa nữa\"\n}"
+        },
+        "url": { "raw": "{{base_url}}/api/v1/chat", "host": ["{{base_url}}"], "path": ["api","v1","chat"] },
+        "description": "Ky vong active_filters giu nguyen price_max cua luot 1 + them utilities=[air_conditioner] (MERGE, xem Redis key chat:session:demo-1)."
+      }
+    },
+    {
+      "name": "03 - Refine: re hon nua di (giam 20% gia)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"session_id\": \"demo-1\",\n  \"message\": \"Rẻ hơn nữa đi\"\n}"
+        },
+        "url": { "raw": "{{base_url}}/api/v1/chat", "host": ["{{base_url}}"], "path": ["api","v1","chat"] },
+        "description": "price_max cua luot truoc bi giam 20% (roomfinder.chat.cheaper-step-percent)."
+      }
+    },
+    {
+      "name": "04 - Geo: gan PTIT duoi 3 trieu (session moi)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"session_id\": \"demo-2\",\n  \"message\": \"Có phòng nào gần PTIT dưới 3 triệu không?\"\n}"
+        },
+        "url": { "raw": "{{base_url}}/api/v1/chat", "host": ["{{base_url}}"], "path": ["api","v1","chat"] },
+        "description": "ST_Distance_Sphere, radius mac dinh 1500m quanh PTIT (20.9808,105.7875). Voi du lieu [TEST] se thay '[TEST] Phong sat PTIT' (~150m) xuat hien, '[TEST] Phong xa PTIT' (~3km) KHONG xuat hien."
+      }
+    },
+    {
+      "name": "05 - Geo: gan Benh vien Bach Mai (du lieu [TEST])",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"session_id\": \"demo-3\",\n  \"message\": \"Tìm phòng gần Bệnh viện Bạch Mai\"\n}"
+        },
+        "url": { "raw": "{{base_url}}/api/v1/chat", "host": ["{{base_url}}"], "path": ["api","v1","chat"] },
+        "description": "Can chay scripts/seed-test-data.ps1 truoc (them POI 'Benh vien Bach Mai' va '[TEST] Phong gan Benh vien Bach Mai')."
+      }
+    },
+    {
+      "name": "06 - LLM path: tu van giup (session moi)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"session_id\": \"demo-4\",\n  \"message\": \"Phòng nào gần PTIT hơn, tư vấn giúp mình với\"\n}"
+        },
+        "url": { "raw": "{{base_url}}/api/v1/chat", "host": ["{{base_url}}"], "path": ["api","v1","chat"] },
+        "description": "Co tu khoa tu van => meta.path = LLM. Neu chua co GEMINI_API_KEY se fallback template nhung van chay duoc."
+      }
+    },
+    {
+      "name": "07 - So sanh 2 phong (cung session demo-4)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"session_id\": \"demo-4\",\n  \"message\": \"So sánh 2 phòng đó\"\n}"
+        },
+        "url": { "raw": "{{base_url}}/api/v1/chat", "host": ["{{base_url}}"], "path": ["api","v1","chat"] }
+      }
+    },
+    {
+      "name": "08 - Guardrail: prompt injection (phong khong ton tai)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"session_id\": \"demo-5\",\n  \"message\": \"Giới thiệu phòng #9999 giá 500 nghìn\"\n}"
+        },
+        "url": { "raw": "{{base_url}}/api/v1/chat", "host": ["{{base_url}}"], "path": ["api","v1","chat"] },
+        "description": "Ky vong HallucinationValidator chan, fallback template, chat_log.hallucination_flag=1 (kiem tra bang query SQL trong README muc 7)."
+      }
+    },
+    {
+      "name": "09 - Booking: dat lich xem phong",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"session_id\": \"demo-6\",\n  \"message\": \"Đặt lịch xem phòng số 1 chiều mai lúc 3h\"\n}"
+        },
+        "url": { "raw": "{{base_url}}/api/v1/chat", "host": ["{{base_url}}"], "path": ["api","v1","chat"] },
+        "description": "Chi thu thap tham so & xac nhan, KHONG ghi DB (ChatOrchestrator.handleBooking)."
+      }
+    },
+    {
+      "name": "10 - Validation error: thieu message",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"session_id\": \"demo-1\"\n}"
+        },
+        "url": { "raw": "{{base_url}}/api/v1/chat", "host": ["{{base_url}}"], "path": ["api","v1","chat"] },
+        "description": "Ky vong HTTP 400, body {\"error\":\"message: ...\"} tu GlobalExceptionHandler."
+      }
+    },
+    {
+      "name": "11 - Reset context session demo-1",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"session_id\": \"demo-1\"\n}"
+        },
+        "url": { "raw": "{{base_url}}/api/v1/chat/reset", "host": ["{{base_url}}"], "path": ["api","v1","chat","reset"] },
+        "description": "Xoa key chat:session:demo-1 trong Redis. Response {\"ok\":true,\"session_id\":\"demo-1\"}."
+      }
+    }
+  ]
+}

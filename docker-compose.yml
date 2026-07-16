@@ -35,4 +35,4 @@ services:
       # Cấp GEMINI_API_KEY từ shell: `export GEMINI_API_KEY=...` trước khi up.
       # Nếu để trống, NLU/NLG tự fallback rule-based/template (vẫn chạy được).
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
-    ports: ["8080:8080"]
+    ports: ["8081:8080"]

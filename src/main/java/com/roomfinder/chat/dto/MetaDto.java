@@ -12,7 +12,7 @@ import lombok.Getter;
 @Builder
 @AllArgsConstructor
 public class MetaDto {
-    private String path;          // FAST | LLM | CLARIFY
+    private String path;          // FAST | LLM | TEMPLATE | CLARIFY
     private boolean relaxed;
     private long latencyMs;
     private double nluConfidence;

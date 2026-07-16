@@ -29,7 +29,7 @@ public class ChatLog {
     @Column(columnDefinition = "json")
     private String resultRoomIds;       // JSON string
 
-    private String path;                // FAST | LLM | CLARIFY
+    private String path;                // FAST | LLM | TEMPLATE | CLARIFY
     private Boolean hallucinationFlag = false;
     private Integer latencyMs;
 

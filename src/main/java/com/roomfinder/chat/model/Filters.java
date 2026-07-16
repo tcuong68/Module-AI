@@ -81,7 +81,7 @@ public class Filters {
 
     /** Có đủ ít nhất 1 slot định vị/giá để chạy search (§3.1, §4.3)? */
     public boolean hasAnyLocatorSlot() {
-        return priceMax != null || location != null || poi != null;
+        return priceMax != null || priceMin != null || location != null || poi != null;
     }
 
     public boolean hasUtility(String key) {

@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS chat_log (
     nlu_confidence     FLOAT,
     extracted_entities JSON,
     result_room_ids    JSON,
-    path               VARCHAR(8),                    -- FAST | LLM | CLARIFY
+    path               VARCHAR(8),                    -- FAST | LLM | TEMPLATE | CLARIFY
     hallucination_flag BOOLEAN DEFAULT FALSE,
     latency_ms         INT,
     created_at         TIMESTAMP DEFAULT CURRENT_TIMESTAMP

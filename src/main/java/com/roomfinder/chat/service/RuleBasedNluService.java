@@ -8,7 +8,10 @@ import com.roomfinder.chat.normalizer.PriceNormalizer;
 import com.roomfinder.chat.normalizer.UtilityNormalizer;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -27,8 +30,23 @@ public class RuleBasedNluService implements NluService {
     // Từ khóa POI → chuỗi để RetrievalService khớp alias trong bảng poi
     private static final List<String> POI_KEYS = List.of("PTIT", "Bách Khoa", "Mỹ Đình");
 
+    // Từ chỉ hướng phải nằm SÁT token giá (chỉ cách bởi khoảng trắng), không quét
+    // cả câu: "Nam Từ Liêm" chứa "từ" và "trên 30m2" là diện tích — quét cả câu
+    // sẽ gán nhầm price_min. group(1)=hướng trước, group(2)=giá, group(3)=hướng sau.
     private static final Pattern PRICE_TOKEN = Pattern.compile(
-        "(\\d+(?:[.,]\\d+)?\\s*(?:triệu|tr|củ|chai|nghìn|ngàn|k)\\d*|\\d{6,})");
+        "(dưới|trên|hơn|từ|tối thiểu|tối đa|không quá)?\\s*"
+        + "(\\d+(?:[.,]\\d+)?\\s*(?:triệu|tr|củ|chai|nghìn|ngàn|k)\\d*|\\d{6,})"
+        + "\\s*(trở lên|trở xuống)?");
+
+    private static final List<String> PRICE_MIN_CUES = List.of("trên", "hơn", "từ", "tối thiểu");
+
+    // Tham chiếu phòng theo thứ tự: "phòng 1", "phòng số 2", "so sánh phòng 1 và 2".
+    // Lookahead loại số đi kèm đơn vị để "phòng 3 triệu"/"phòng 20m2" không thành ref.
+    private static final String NOT_A_UNIT = "(?!\\s*(?:triệu|tr|củ|chai|nghìn|ngàn|k|m2|m²|\\d))";
+    private static final Pattern ROOM_REF = Pattern.compile(
+        "(?:phòng|căn|cái)\\s*(?:số|thứ)?\\s*(\\d{1,2})" + NOT_A_UNIT);
+    private static final Pattern ROOM_REF_MORE = Pattern.compile(
+        "\\s*(?:và|với|,)\\s*(\\d{1,2})" + NOT_A_UNIT);
     private static final Pattern AREA = Pattern.compile("(?:trên|từ)?\\s*(\\d{1,3})\\s*m2|(\\d{1,3})\\s*m²");
 
     @Override
@@ -42,13 +60,13 @@ public class RuleBasedNluService implements NluService {
         // --- Entities ---
         Matcher pm = PRICE_TOKEN.matcher(lower);
         if (pm.find()) {
-            Long price = PriceNormalizer.normalize(pm.group(1));
+            Long price = PriceNormalizer.normalize(pm.group(2));
             if (price != null) {
-                if (lower.contains("trở lên") || lower.contains("tối thiểu")
-                        || lower.contains("từ") && lower.contains("trở"))
-                    f.setPriceMin(price);
-                else
-                    f.setPriceMax(price);
+                String before = pm.group(1);
+                boolean min = "trở lên".equals(pm.group(3))
+                        || (before != null && PRICE_MIN_CUES.contains(before));
+                if (min) f.setPriceMin(price);
+                else     f.setPriceMax(price);   // mặc định: coi số là ngân sách tối đa
             }
         }
         for (String d : DISTRICTS) {
@@ -64,10 +82,32 @@ public class RuleBasedNluService implements NluService {
             if (g != null) f.setAreaMin(Double.parseDouble(g));
         }
 
+        f.setRoomRefs(detectRoomRefs(lower));
+
         r.setEntities(f);
         r.setIntent(detectIntent(lower, f));
         r.setConfidence(0.70);
         return r;
+    }
+
+    /**
+     * "so sánh phòng 1 và 2" → [1, 2]. Chỉ nhận số nối tiếp NGAY SAU ref đầu
+     * (qua "và"/"với"/","), tránh vơ số ở mệnh đề khác của câu.
+     */
+    private List<Integer> detectRoomRefs(String s) {
+        Set<Integer> refs = new LinkedHashSet<>();
+        Matcher m = ROOM_REF.matcher(s);
+        if (m.find()) {
+            refs.add(Integer.parseInt(m.group(1)));
+            String tail = s.substring(m.end());
+            Matcher more = ROOM_REF_MORE.matcher(tail);
+            while (more.lookingAt()) {
+                refs.add(Integer.parseInt(more.group(1)));
+                tail = tail.substring(more.end());
+                more = ROOM_REF_MORE.matcher(tail);
+            }
+        }
+        return new ArrayList<>(refs);
     }
 
     private Intent detectIntent(String s, Filters f) {

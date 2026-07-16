@@ -54,7 +54,11 @@ roomfinder:
     provider: gemini
     gemini:
       api-key: ${GEMINI_API_KEY:}
-      model: gemini-1.5-flash
+      # Đo trên free tier của key này: 2.5-flash = 5 RPM; 3.1-flash-lite = 15 RPM.
+      # 2.0-flash và 2.5-flash-lite trả 404 "no longer available to new users".
+      # LƯU Ý khi đổi model: 429 KHÔNG chứng minh model còn sống — quota cạn thì
+      # API trả 429 che mất 404. Chỉ tin khi gọi thật ra HTTP 200.
+      model: gemini-3.1-flash-lite
       base-url: https://generativelanguage.googleapis.com/v1beta
       temperature-nlu: 0.0
       temperature-nlg: 0.3

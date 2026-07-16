@@ -6,6 +6,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * Chuẩn hóa tiện ích về enum key (§3.3): từ đồng nghĩa + bỏ dấu →
@@ -14,7 +16,11 @@ import java.util.Set;
  */
 public final class UtilityNormalizer {
 
-    /** key chuẩn → danh sách biến thể (đã bỏ dấu, lowercase). */
+    /**
+     * key chuẩn → danh sách biến thể (đã bỏ dấu, lowercase).
+     * Biến thể phải khớp theo RANH GIỚI TỪ (xem matches): "ac" từng khớp
+     * substring trong "khác"/"các" → mọi câu chứa các từ đó bị gán air_conditioner.
+     */
     private static final Map<String, List<String>> SYNONYMS = Map.of(
         "air_conditioner", List.of("dieu hoa", "dieu hoa nhiet do", "may lanh", "ac", "air conditioner"),
         "parking",         List.of("cho de xe", "de xe", "bai xe", "gui xe", "parking", "cho do xe", "do o to"),
@@ -22,7 +28,20 @@ public final class UtilityNormalizer {
         "washing_machine", List.of("may giat", "giat")
     );
 
+    /** Biến thể → regex khớp theo ranh giới từ, biên dịch sẵn. */
+    private static final Map<String, List<Pattern>> PATTERNS = SYNONYMS.entrySet().stream()
+            .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().stream()
+                    .map(v -> Pattern.compile("\\b" + Pattern.quote(v) + "\\b"))
+                    .toList()));
+
     private UtilityNormalizer() {}
+
+    private static boolean matches(String text, List<Pattern> variants) {
+        for (Pattern p : variants) {
+            if (p.matcher(text).find()) return true;
+        }
+        return false;
+    }
 
     /** Chuẩn hóa 1 span → key hoặc null nếu không nhận diện được. */
     public static String normalizeOne(String span) {
@@ -30,10 +49,8 @@ public final class UtilityNormalizer {
         String s = stripAccent(span.trim().toLowerCase());
         // đã là key chuẩn?
         if (SYNONYMS.containsKey(span.trim().toLowerCase())) return span.trim().toLowerCase();
-        for (var e : SYNONYMS.entrySet()) {
-            for (String variant : e.getValue()) {
-                if (s.contains(variant)) return e.getKey();
-            }
+        for (var e : PATTERNS.entrySet()) {
+            if (matches(s, e.getValue())) return e.getKey();
         }
         return null;
     }
@@ -43,10 +60,8 @@ public final class UtilityNormalizer {
         if (text == null) return new ArrayList<>();
         String s = stripAccent(text.toLowerCase());
         Set<String> out = new LinkedHashSet<>();
-        for (var e : SYNONYMS.entrySet()) {
-            for (String variant : e.getValue()) {
-                if (s.contains(variant)) { out.add(e.getKey()); break; }
-            }
+        for (var e : PATTERNS.entrySet()) {
+            if (matches(s, e.getValue())) out.add(e.getKey());
         }
         return new ArrayList<>(out);
     }
