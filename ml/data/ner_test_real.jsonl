@@ -1,0 +1,87 @@
+{"text": "tìm phòng tầm 2tr ở cầu giấy", "entities": [{"start": 14, "end": 17, "label": "PRICE_MAX"}, {"start": 20, "end": 28, "label": "LOCATION"}]}
+{"text": "có phòng nào rẻ rẻ thôi khoảng 1tr5 không ạ", "entities": [{"start": 31, "end": 35, "label": "PRICE_MAX"}]}
+{"text": "kiếm phòng gần bách khoa cho sinh viên", "entities": [{"start": 15, "end": 24, "label": "POI"}]}
+{"text": "phòng khép kín dưới 3 triệu khu đống đa", "entities": [{"start": 15, "end": 27, "label": "PRICE_MAX"}, {"start": 32, "end": 39, "label": "LOCATION"}, {"start": 0, "end": 14, "label": "ROOM_TYPE"}]}
+{"text": "cho e hỏi có phòng nào ở tây hồ tầm 4 triệu ko ạ", "entities": [{"start": 25, "end": 31, "label": "LOCATION"}, {"start": 36, "end": 43, "label": "PRICE_MAX"}]}
+{"text": "phòng có máy lạnh với wifi giá mềm mềm thôi", "entities": [{"start": 9, "end": 17, "label": "UTILITY"}, {"start": 22, "end": 26, "label": "UTILITY"}]}
+{"text": "minh can tim phong o ha dong gia duoi 2tr5", "entities": [{"start": 21, "end": 28, "label": "LOCATION"}, {"start": 33, "end": 42, "label": "PRICE_MAX"}]}
+{"text": "tìm hộ mình phòng gần đại học ngoại thương", "entities": [{"start": 22, "end": 42, "label": "POI"}]}
+{"text": "phòng nào có chỗ để xe ô tô không nhỉ khu long biên", "entities": [{"start": 13, "end": 22, "label": "UTILITY"}, {"start": 42, "end": 51, "label": "LOCATION"}]}
+{"text": "cần phòng rộng trên 25m2 giá cả hợp lý", "entities": [{"start": 15, "end": 24, "label": "AREA_MIN"}]}
+{"text": "phòng trọ giá sinh viên khu vực hoàng mai", "entities": [{"start": 0, "end": 9, "label": "ROOM_TYPE"}, {"start": 32, "end": 41, "label": "LOCATION"}]}
+{"text": "phòng nào view đẹp giá dưới 5tr khu ba đình vậy shop", "entities": [{"start": 23, "end": 31, "label": "PRICE_MAX"}, {"start": 36, "end": 43, "label": "LOCATION"}]}
+{"text": "e muốn thuê phòng gần bến xe mỹ đình", "entities": [{"start": 22, "end": 36, "label": "POI"}]}
+{"text": "phòng nào full nội thất giá tầm 3tr5 khu nam từ liêm", "entities": [{"start": 32, "end": 36, "label": "PRICE_MAX"}, {"start": 41, "end": 52, "label": "LOCATION"}]}
+{"text": "phòng có internet ổn định không, ở khu vực hoàn kiếm ấy", "entities": [{"start": 9, "end": 17, "label": "UTILITY"}, {"start": 43, "end": 52, "label": "LOCATION"}]}
+{"text": "mình sinh viên PTIT muốn tìm phòng gần trường giá rẻ", "entities": [{"start": 15, "end": 19, "label": "POI"}]}
+{"text": "phòng bắc từ liêm tầm 2 triệu rưỡi có máy giặt không", "entities": [{"start": 6, "end": 17, "label": "LOCATION"}, {"start": 22, "end": 34, "label": "PRICE_MAX"}, {"start": 38, "end": 46, "label": "UTILITY"}]}
+{"text": "phòng riêng biệt khu hai bà trưng giá tốt", "entities": [{"start": 21, "end": 33, "label": "LOCATION"}]}
+{"text": "thế có wifi không", "entities": [{"start": 7, "end": 11, "label": "UTILITY"}]}
+{"text": "có chỗ để xe máy không", "entities": [{"start": 3, "end": 12, "label": "UTILITY"}]}
+{"text": "đổi qua khu cầu giấy đi", "entities": [{"start": 12, "end": 20, "label": "LOCATION"}]}
+{"text": "cần thêm máy giặt nữa", "entities": [{"start": 9, "end": 17, "label": "UTILITY"}]}
+{"text": "thôi bỏ điều kiện điều hòa đi", "entities": [{"start": 18, "end": 26, "label": "UTILITY"}]}
+{"text": "ưu tiên có internet với chỗ để xe", "entities": [{"start": 11, "end": 19, "label": "UTILITY"}, {"start": 24, "end": 33, "label": "UTILITY"}]}
+{"text": "có máy lạnh k thêm", "entities": [{"start": 3, "end": 11, "label": "UTILITY"}]}
+{"text": "khu đó xa quá đổi sang hà đông đi", "entities": [{"start": 23, "end": 30, "label": "LOCATION"}]}
+{"text": "phòng số 2 có gì hay không", "entities": [{"start": 0, "end": 10, "label": "ROOM_REF"}]}
+{"text": "cho xem kỹ cái đầu tiên đi", "entities": [{"start": 11, "end": 23, "label": "ROOM_REF"}]}
+{"text": "phòng 1 diện tích bao nhiêu vậy", "entities": [{"start": 0, "end": 7, "label": "ROOM_REF"}]}
+{"text": "chi tiết phòng thứ hai giúp mình với", "entities": [{"start": 9, "end": 22, "label": "ROOM_REF"}]}
+{"text": "cái phòng số 3 địa chỉ chỗ nào", "entities": [{"start": 4, "end": 14, "label": "ROOM_REF"}]}
+{"text": "xem full ảnh phòng đầu tiên được không", "entities": [{"start": 13, "end": 27, "label": "ROOM_REF"}]}
+{"text": "cho hỏi thêm về căn số 2", "entities": [{"start": 20, "end": 24, "label": "ROOM_REF"}]}
+{"text": "so sánh phòng 1 và phòng 2 giúp mình", "entities": [{"start": 8, "end": 15, "label": "ROOM_REF"}, {"start": 19, "end": 26, "label": "ROOM_REF"}]}
+{"text": "phòng nào tốt hơn giữa cái đầu tiên với phòng số 3", "entities": [{"start": 23, "end": 35, "label": "ROOM_REF"}, {"start": 40, "end": 50, "label": "ROOM_REF"}]}
+{"text": "phòng số 1 với phòng thứ hai khác nhau chỗ nào", "entities": [{"start": 0, "end": 10, "label": "ROOM_REF"}, {"start": 15, "end": 28, "label": "ROOM_REF"}]}
+{"text": "đặt lịch xem phòng 1 chiều mai nhé", "entities": [{"start": 13, "end": 20, "label": "ROOM_REF"}, {"start": 21, "end": 30, "label": "DATETIME"}]}
+{"text": "hẹn xem phòng số 2 lúc 9h sáng thứ 3", "entities": [{"start": 8, "end": 18, "label": "ROOM_REF"}, {"start": 23, "end": 36, "label": "DATETIME"}]}
+{"text": "cho mình đặt lịch xem phòng tối nay lúc 7h", "entities": [{"start": 28, "end": 42, "label": "DATETIME"}]}
+{"text": "đặt hẹn xem phòng đầu tiên vào sáng mai giúp em", "entities": [{"start": 12, "end": 26, "label": "ROOM_REF"}, {"start": 31, "end": 39, "label": "DATETIME"}]}
+{"text": "book lịch xem phòng số 3 chiều thứ 4", "entities": [{"start": 14, "end": 24, "label": "ROOM_REF"}, {"start": 25, "end": 36, "label": "DATETIME"}]}
+{"text": "ở phòng 1 mỗi tháng hết bao nhiêu tiền tất cả", "entities": [{"start": 2, "end": 9, "label": "ROOM_REF"}]}
+{"text": "tính giúp em chi phí điện nước phòng số 2", "entities": [{"start": 31, "end": 41, "label": "ROOM_REF"}]}
+{"text": "phòng thứ hai tính đủ dịch vụ hết nhiêu tiền", "entities": [{"start": 0, "end": 13, "label": "ROOM_REF"}]}
+{"text": "a oi tim phong dum e o dong da duoi 2 trieu", "entities": [{"start": 23, "end": 30, "label": "LOCATION"}, {"start": 31, "end": 43, "label": "PRICE_MAX"}]}
+{"text": "phòng nào cách ptit khoảng 2km đổ lại không shop", "entities": [{"start": 15, "end": 19, "label": "POI"}, {"start": 27, "end": 30, "label": "RADIUS"}]}
+{"text": "mình cần phòng bán kính 1km quanh đại học quốc gia", "entities": [{"start": 24, "end": 27, "label": "RADIUS"}, {"start": 34, "end": 50, "label": "POI"}]}
+{"text": "tìm chung cư mini giá dưới 4tr5 khu times city", "entities": [{"start": 4, "end": 17, "label": "ROOM_TYPE"}, {"start": 22, "end": 31, "label": "PRICE_MAX"}, {"start": 36, "end": 46, "label": "POI"}]}
+{"text": "nhà nguyên căn cho nhóm 3-4 người khu hà đông", "entities": [{"start": 0, "end": 14, "label": "ROOM_TYPE"}, {"start": 38, "end": 45, "label": "LOCATION"}]}
+{"text": "có phòng nào tầm giá sinh viên không ạ, khoảng 1tr8 thôi", "entities": [{"start": 47, "end": 51, "label": "PRICE_MAX"}]}
+{"text": "phòng full đồ giá 3 triệu khu vực đống đa hoặc cầu giấy đều được", "entities": [{"start": 18, "end": 25, "label": "PRICE_MAX"}, {"start": 34, "end": 41, "label": "LOCATION"}]}
+{"text": "tìm phòng có bãi để ô tô khu vực long biên", "entities": [{"start": 13, "end": 16, "label": "UTILITY"}, {"start": 33, "end": 42, "label": "LOCATION"}]}
+{"text": "phòng nào diện tích tầm 30 m² không nhỉ", "entities": [{"start": 24, "end": 29, "label": "AREA_MIN"}]}
+{"text": "cho hỏi còn phòng nào trống ở khu ngoại thương k ạ", "entities": [{"start": 34, "end": 46, "label": "POI"}]}
+{"text": "e tim phong o gan dai hoc kinh te quoc dan", "entities": [{"start": 18, "end": 42, "label": "POI"}]}
+{"text": "thôi khỏi cần điều hòa cũng được", "entities": [{"start": 14, "end": 22, "label": "UTILITY"}]}
+{"text": "chuyển hướng tìm bên khu tây hồ thử xem", "entities": [{"start": 25, "end": 31, "label": "LOCATION"}]}
+{"text": "giữ nguyên giá nhưng đổi khu vực sang long biên", "entities": [{"start": 38, "end": 47, "label": "LOCATION"}]}
+{"text": "thêm điều kiện có wifi mạnh vào", "entities": [{"start": 18, "end": 22, "label": "UTILITY"}]}
+{"text": "giảm bán kính xuống còn 1km thôi", "entities": [{"start": 24, "end": 27, "label": "RADIUS"}]}
+{"text": "căn đầu tiên có thang máy không ta", "entities": [{"start": 4, "end": 12, "label": "ROOM_REF"}]}
+{"text": "phòng số 2 hình ảnh thực tế không đó", "entities": [{"start": 0, "end": 10, "label": "ROOM_REF"}]}
+{"text": "cho e xin thêm ảnh phòng 3", "entities": [{"start": 19, "end": 26, "label": "ROOM_REF"}]}
+{"text": "phòng thứ hai an ninh sao rồi", "entities": [{"start": 0, "end": 13, "label": "ROOM_REF"}]}
+{"text": "thông tin chi tiết căn số 1 với", "entities": [{"start": 23, "end": 27, "label": "ROOM_REF"}]}
+{"text": "giữa phòng số 1 và cái đầu tiên thì chọn cái nào", "entities": [{"start": 5, "end": 15, "label": "ROOM_REF"}, {"start": 19, "end": 31, "label": "ROOM_REF"}]}
+{"text": "phòng 2 với phòng 3 cái nào rộng hơn", "entities": [{"start": 0, "end": 7, "label": "ROOM_REF"}, {"start": 12, "end": 19, "label": "ROOM_REF"}]}
+{"text": "hẹn xem phòng 2 lúc 10h sáng thứ 5 nhé", "entities": [{"start": 8, "end": 15, "label": "ROOM_REF"}, {"start": 20, "end": 34, "label": "DATETIME"}]}
+{"text": "đặt xem phòng số 1 giúp em vào 8h tối mai", "entities": [{"start": 8, "end": 18, "label": "ROOM_REF"}, {"start": 31, "end": 41, "label": "DATETIME"}]}
+{"text": "t rảnh chiều mai qua xem phòng luôn được k", "entities": [{"start": 7, "end": 16, "label": "DATETIME"}]}
+{"text": "sắp lịch xem phòng đầu tiên giúp mình với ạ", "entities": [{"start": 13, "end": 27, "label": "ROOM_REF"}]}
+{"text": "phòng 2 cộng hết điện nước dịch vụ khoảng bao nhiêu", "entities": [{"start": 0, "end": 7, "label": "ROOM_REF"}]}
+{"text": "ước tính giúp em chi phí ở phòng số 3", "entities": [{"start": 27, "end": 37, "label": "ROOM_REF"}]}
+{"text": "phòng khép kín dưới 2tr8 gần đại học quốc gia bán kính 1km", "entities": [{"start": 0, "end": 14, "label": "ROOM_TYPE"}, {"start": 15, "end": 24, "label": "PRICE_MAX"}, {"start": 29, "end": 45, "label": "POI"}, {"start": 55, "end": 58, "label": "RADIUS"}]}
+{"text": "tìm nhà nguyên căn khu hoàn kiếm giá từ 5 triệu trở lên", "entities": [{"start": 4, "end": 18, "label": "ROOM_TYPE"}, {"start": 23, "end": 32, "label": "LOCATION"}, {"start": 40, "end": 47, "label": "PRICE_MIN"}]}
+{"text": "phòng có wifi, chỗ để xe, máy giặt ở khu bắc từ liêm", "entities": [{"start": 9, "end": 13, "label": "UTILITY"}, {"start": 15, "end": 24, "label": "UTILITY"}, {"start": 26, "end": 34, "label": "UTILITY"}, {"start": 41, "end": 52, "label": "LOCATION"}]}
+{"text": "mình cần phòng trên 20m2 gần bến xe mỹ đình dưới 3tr5", "entities": [{"start": 15, "end": 24, "label": "AREA_MIN"}, {"start": 29, "end": 43, "label": "POI"}, {"start": 44, "end": 53, "label": "PRICE_MAX"}]}
+{"text": "phòng khu vực nam từ liêm tầm 2tr đến 3tr", "entities": [{"start": 14, "end": 25, "label": "LOCATION"}, {"start": 30, "end": 33, "label": "PRICE_MIN"}]}
+{"text": "cho hỏi phòng nào gần học viện bưu chính viễn thông không", "entities": [{"start": 22, "end": 51, "label": "POI"}]}
+{"text": "bớt giá xuống dưới 2 triệu rưỡi được không", "entities": [{"start": 14, "end": 31, "label": "PRICE_MAX"}]}
+{"text": "mở rộng bán kính lên 3km giúp mình", "entities": [{"start": 21, "end": 24, "label": "RADIUS"}]}
+{"text": "đổi loại phòng sang chung cư mini xem sao", "entities": [{"start": 20, "end": 33, "label": "ROOM_TYPE"}]}
+{"text": "thêm điều kiện diện tích trên 22m2", "entities": [{"start": 25, "end": 34, "label": "AREA_MIN"}]}
+{"text": "phòng số 1 và phòng số 3 hẹn xem cùng lúc được không, chiều mai nhé", "entities": [{"start": 0, "end": 10, "label": "ROOM_REF"}, {"start": 54, "end": 63, "label": "DATETIME"}]}
+{"text": "mình muốn xem cả phòng đầu tiên và phòng thứ hai vào sáng thứ 2", "entities": [{"start": 17, "end": 31, "label": "ROOM_REF"}, {"start": 35, "end": 48, "label": "ROOM_REF"}]}
+{"text": "phòng số 2 có cho nuôi thú cưng không", "entities": [{"start": 0, "end": 10, "label": "ROOM_REF"}]}
+{"text": "giá phòng 1 đã gồm phí quản lý chưa", "entities": [{"start": 4, "end": 11, "label": "ROOM_REF"}]}

@@ -1,0 +1,11 @@
+# GĐ2 — huấn luyện PhoBERT intent + NER (SPEC §11).
+# torch bản CPU (không có GPU xác nhận trong môi trường phát triển hiện tại).
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch
+accelerate>=1.1
+transformers>=4.40
+datasets>=2.19
+evaluate>=0.4
+seqeval>=1.2
+py_vncorenlp>=0.1.4
+scikit-learn>=1.4

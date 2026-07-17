@@ -4,8 +4,15 @@ Cài đặt **Giai đoạn 1** theo `SPEC_Module_Chatbot_AI_Tim_Phong_Tro.md`: c
 biến câu nói tự nhiên → truy vấn có cấu trúc → tìm phòng **có thật trong CSDL** → sinh câu
 tư vấn dựa **hoàn toàn** trên dữ liệu truy xuất, có **guardrail chống bịa (hallucination)**.
 
-> Phạm vi bản này: **chỉ backend Spring Boot (GĐ1)**. NLU dùng **LLM (Gemini)** trả JSON.
-> PhoBERT (GĐ2), Semantic Search (GĐ3), React frontend, Python NLU service — **chưa** trong bản này.
+> Phạm vi file này: **chỉ backend Spring Boot (GĐ1)**. NLU dùng **LLM (Gemini)** trả JSON.
+> Semantic Search (GĐ3) — **chưa** trong bản này.
+
+## Frontend & Giai đoạn 2 (PhoBERT)
+
+- **`frontend/`** — chat widget React + Vite + TypeScript, gọi thẳng API dưới đây. Xem
+  `frontend/README.md`.
+- **`ml/`** — dataset synthetic + script huấn luyện PhoBERT intent/NER (GĐ2, SPEC §11/§13).
+  Xem `ml/README.md` (đọc kỹ mục cảnh báo về bộ test "proxy" trước khi dùng số liệu để bảo vệ).
 
 ## 1. Kiến trúc & ánh xạ tới SPEC
 
