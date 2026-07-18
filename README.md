@@ -13,6 +13,10 @@ tư vấn dựa **hoàn toàn** trên dữ liệu truy xuất, có **guardrail c
   `frontend/README.md`.
 - **`ml/`** — dataset synthetic + script huấn luyện PhoBERT intent/NER (GĐ2, SPEC §11/§13).
   Xem `ml/README.md` (đọc kỹ mục cảnh báo về bộ test "proxy" trước khi dùng số liệu để bảo vệ).
+- **`nlu-service/`** — FastAPI bọc 2 model PhoBERT đã train (GĐ2, SPEC §11 bước 2.3):
+  `POST /nlu` trả intent + entity span. Xem `nlu-service/README.md`. Spring gọi qua
+  `PhoBertNluServiceImpl` (@Primary, bước 2.4): timeout 300ms, chết → fallback
+  LLM → rule-based; tắt bằng `NLU_ENABLED=false` để về hẳn GĐ1.
 
 ## 1. Kiến trúc & ánh xạ tới SPEC
 
@@ -133,6 +137,8 @@ mvn test
 - **POI alias matching** làm ở Java (số POI nhỏ) thay vì `JSON_CONTAINS` — dễ port, tránh phụ thuộc cú pháp JSON của MySQL.
 - **Elasticsearch/Kafka**: không dùng trong luồng chat đồng bộ (đúng khuyến nghị §9.2). MySQL đủ cho quy mô đồ án; chuyển ES khi > 10.000 phòng (§10.3).
 - **book_appointment**: chỉ thu thập tham số & xác nhận, **không** ghi DB (đúng §1.2) — chỗ tích hợp API nghiệp vụ được đánh dấu trong `ChatOrchestrator.handleBooking`.
+
+Việc dự định làm sau (geocoding fallback, routing API, data thật cho ML): xem [TODO.md](TODO.md).
 
 ## 9. Cấu trúc thư mục
 

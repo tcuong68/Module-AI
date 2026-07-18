@@ -1,0 +1,13 @@
+# Giữ build context nhỏ — cả 2 Dockerfile (Spring root + nlu-service/) chỉ cần
+# src/pom.xml và ml/vncorenlp_util.py + ml/vncorenlp/ + nlu-service/.
+# Model PhoBERT (~515MB/cái) mount qua volume, KHÔNG đưa vào context.
+.git
+target
+frontend
+postman
+ml/.venv
+ml/out-*
+ml/data
+ml/__pycache__
+ml/*.log
+*.log

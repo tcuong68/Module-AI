@@ -7,19 +7,17 @@ import com.roomfinder.chat.model.NluResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 
 /**
  * Cài đặt NLU bằng LLM trả JSON — GĐ1 (§10 bước 1.1).
- * @Primary: là bean NLU mặc định. Khi thay bằng PhoBERT (GĐ2), chỉ cần
- * chuyển @Primary sang PhoBertNluServiceImpl — tầng trên không đổi.
+ * Từ GĐ2, bean NLU mặc định là PhoBertNluServiceImpl (@Primary); class này
+ * thành tầng fallback thứ nhất khi nlu-service chết/timeout.
  *
  * An toàn: nếu LLM lỗi/không có key → fallback sang NLU rule-based để
  * hệ thống không sập vì NLU (§11 bước 2.3).
  */
 @Service
-@Primary
 public class LlmNluServiceImpl implements NluService {
 
     private static final Logger log = LoggerFactory.getLogger(LlmNluServiceImpl.class);

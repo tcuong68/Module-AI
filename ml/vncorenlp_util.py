@@ -46,6 +46,39 @@ def _download_wseg_only(save_dir: Path):
         urllib.request.urlretrieve(f"{_BASE_URL}/{rel_url}", str(dest))
 
 
+def _resolve_save_dir(save_dir: Path) -> Path:
+    """Tránh thư mục có DẤU CÁCH trong đường dẫn.
+
+    VnCoreNLP (phía Java) suy ra vị trí thư mục `models/` từ vị trí file
+    VnCoreNLP-1.2.jar lấy qua URL của classloader — URL này ENCODE dấu cách
+    thành "%20" nhưng VnCoreNLP dùng thẳng làm đường dẫn file, không decode
+    lại. Nên nếu repo nằm ở đường dẫn có dấu cách (vd. "D:\\Code\\Java Code\\...")
+    thì Java đi tìm "D:\\Code\\Java%20Code\\...\\wordsegmenter.rdr" và báo
+    "is not found!". Lỗi nằm trong VnCoreNLP, không sửa được từ phía Python.
+
+    Cách xử lý: khi save_dir có dấu cách, đặt jar + model vào thư mục cache
+    không dấu cách (mặc định %LOCALAPPDATA%\\vncorenlp, ghi đè bằng biến môi
+    trường VNCORENLP_DIR). Nội dung tải về giống hệt — chỉ đổi chỗ đặt.
+    """
+    import os
+
+    override = os.environ.get("VNCORENLP_DIR")
+    if override:
+        return Path(override)
+
+    if " " not in str(Path(save_dir).resolve()):
+        return save_dir
+
+    base = os.environ.get("LOCALAPPDATA") or os.path.expanduser("~")
+    fallback = Path(base) / "vncorenlp"
+    if " " in str(fallback.resolve()):
+        raise RuntimeError(
+            f"Khong tim duoc thu muc khong dau cach cho VnCoreNLP (thu: {fallback}). "
+            "Dat bien moi truong VNCORENLP_DIR toi mot duong dan khong co dau cach."
+        )
+    return fallback
+
+
 def get_segmenter(save_dir: Path):
     """Trả về VnCoreNLP segmenter đã sẵn sàng (tải model 1 lần nếu chưa có).
 
@@ -62,7 +95,7 @@ def get_segmenter(save_dir: Path):
 
     import py_vncorenlp
 
-    save_dir = Path(save_dir)
+    save_dir = _resolve_save_dir(Path(save_dir))
     save_dir.mkdir(parents=True, exist_ok=True)
     jar = save_dir / "VnCoreNLP-1.2.jar"
     if not jar.exists():

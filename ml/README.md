@@ -131,6 +131,8 @@ nhiều lần.
 ## Việc còn lại trước khi dùng cho bảo vệ chính thức
 
 1. Thay `*_test_real.jsonl` bằng dữ liệu thật thu thập + gán nhãn tay.
-2. So sánh kết quả PhoBERT với đường cơ sở LLM function-calling (SPEC §14.4).
-3. Bọc FastAPI (`nlu-service/`) + nối `PhoBertNluServiceImpl` vào Spring Boot
-   (SPEC §11 bước 2.3/2.4) — chưa nằm trong phạm vi phần này.
+2. ~~So sánh kết quả PhoBERT với đường cơ sở LLM (SPEC §14.4)~~ — đã đo đủ
+   3 phương án 2026-07-18: harness `eval_nlu_compare.py`, bảng
+   `eval-results/REPORT.md` (trên bộ proxy — có data thật thì đo lại).
+3. ~~Bọc FastAPI (`nlu-service/`) + nối `PhoBertNluServiceImpl` vào Spring Boot
+   (SPEC §11 bước 2.3/2.4)~~ — đã làm 2026-07-18, xem `nlu-service/README.md`.

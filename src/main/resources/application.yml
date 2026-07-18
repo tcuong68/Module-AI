@@ -50,6 +50,12 @@ roomfinder:
       confidence-threshold: 0.90
     # Rule "rẻ hơn nữa đi" — §4.2
     cheaper-step-percent: 20
+  # NLU PhoBERT (GĐ2, §11 bước 2.4) — gọi nlu-service (FastAPI).
+  # Chết/timeout → fallback LLM → rule-based; enabled=false để về hẳn GĐ1.
+  nlu:
+    enabled: ${NLU_ENABLED:true}
+    url: ${NLU_URL:http://localhost:8000}
+    timeout-ms: 300
   llm:
     provider: gemini
     gemini:

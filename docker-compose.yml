@@ -1,4 +1,4 @@
-# docker-compose tối thiểu cho module chatbot (GĐ1) — §9.2.
+# docker-compose tối thiểu cho module chatbot (GĐ1 + nlu GĐ2) — §9.2.
 # Kafka & Elasticsearch KHÔNG có trong luồng chat đồng bộ nên loại khỏi đây (§9.2).
 services:
   mysql:
@@ -35,4 +35,26 @@ services:
       # Cấp GEMINI_API_KEY từ shell: `export GEMINI_API_KEY=...` trước khi up.
       # Nếu để trống, NLU/NLG tự fallback rule-based/template (vẫn chạy được).
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      # NLU PhoBERT (GĐ2, bước 2.4). nlu chết → app tự fallback LLM, nên
+      # KHÔNG depends_on nlu — app không đợi/không sập theo nlu.
+      NLU_URL: http://nlu:8000
     ports: ["8081:8080"]
+
+  # NLU PhoBERT (GĐ2, SPEC §11 bước 2.3). Model KHÔNG bake vào image —
+  # mount từ ml/out-* (phải train xong trước: xem ml/README.md).
+  # Spring chưa gọi service này (bước 2.4); app vẫn chạy được khi nlu tắt.
+  nlu:
+    build:
+      context: .
+      dockerfile: nlu-service/Dockerfile
+    volumes:
+      - ./ml/out-intent:/app/ml/out-intent:ro
+      - ./ml/out-ner:/app/ml/out-ner:ro
+    ports: ["8000:8000"]
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
