@@ -40,6 +40,9 @@ ROOT = Path(__file__).parent
 ML_DIR = Path(os.environ.get("NLU_ML_DIR", ROOT.parent / "ml"))
 INTENT_DIR = os.environ.get("NLU_INTENT_MODEL", str(ML_DIR / "out-intent"))
 NER_DIR = os.environ.get("NLU_NER_MODEL", str(ML_DIR / "out-ner"))
+# Embedding cho semantic rerank (GĐ3, SPEC §12.1) — không cần word-segment
+# (SBERT tự tokenize theo BPE riêng, không phải PhoBERT).
+EMBED_MODEL = os.environ.get("NLU_EMBED_MODEL", "keepitreal/vietnamese-sbert")
 
 sys.path.insert(0, str(ML_DIR))
 from vncorenlp_util import get_segmenter, segment_plain, segment_with_offsets  # noqa: E402
@@ -51,6 +54,7 @@ _M = {}  # segmenter + models, nạp 1 lần lúc startup
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    from sentence_transformers import SentenceTransformer
     from transformers import (
         AutoModelForSequenceClassification,
         AutoModelForTokenClassification,
@@ -63,6 +67,7 @@ async def lifespan(app: FastAPI):
     _M["intent_model"] = AutoModelForSequenceClassification.from_pretrained(INTENT_DIR).eval()
     _M["ner_tok"] = AutoTokenizer.from_pretrained(NER_DIR)
     _M["ner_model"] = AutoModelForTokenClassification.from_pretrained(NER_DIR).eval()
+    _M["embed_model"] = SentenceTransformer(EMBED_MODEL)
     yield
     _M.clear()
 
@@ -88,9 +93,25 @@ class NluResponse(BaseModel):
     entities: list[EntitySpan]
 
 
+class EmbedRequest(BaseModel):
+    text: str
+
+
+class EmbedResponse(BaseModel):
+    vector: list[float]
+
+
 @app.get("/health")
 def health():
-    return {"status": "ok", "intent_model": INTENT_DIR, "ner_model": NER_DIR}
+    return {"status": "ok", "intent_model": INTENT_DIR, "ner_model": NER_DIR, "embed_model": EMBED_MODEL}
+
+
+@app.post("/embed", response_model=EmbedResponse)
+def embed(req: EmbedRequest) -> EmbedResponse:
+    """Embedding cho semantic rerank (GĐ3, SPEC §12.1). Dùng cho cả mô tả phòng
+    (tính 1 lần, cache ở backend) lẫn câu hỏi người dùng (tính mỗi lượt cần rerank)."""
+    vec = _M["embed_model"].encode(req.text.strip() or " ", normalize_embeddings=True)
+    return EmbedResponse(vector=vec.tolist())
 
 
 @app.post("/nlu", response_model=NluResponse)

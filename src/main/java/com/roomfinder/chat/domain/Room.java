@@ -41,6 +41,14 @@ public class Room {
     private String description;
     private String thumbnail;
 
+    /**
+     * Embedding của {@code description} — GĐ3 semantic rerank (SPEC §12.1).
+     * Lưu JSON thô (mảng float, tính bằng {@code EmbeddingClient}), tính lười
+     * (lazy) khi cần rerank lần đầu rồi cache lại — KHÔNG tính lại mỗi request.
+     */
+    @Column(columnDefinition = "JSON")
+    private String descriptionVector;
+
     /** Khoảng cách (m) tới POI — chỉ set khi tìm theo "gần X". Không map cột. */
     @Transient
     private Double distanceM;

@@ -17,4 +17,6 @@ public class MetaDto {
     private long latencyMs;
     private double nluConfidence;
     private boolean hallucinationDetected;
+    /** GĐ3: distance | price | personalized | semantic — null nếu không áp dụng (intent khác search). */
+    private String rankedBy;
 }

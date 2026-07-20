@@ -4,10 +4,10 @@ Cài đặt **Giai đoạn 1** theo `SPEC_Module_Chatbot_AI_Tim_Phong_Tro.md`: c
 biến câu nói tự nhiên → truy vấn có cấu trúc → tìm phòng **có thật trong CSDL** → sinh câu
 tư vấn dựa **hoàn toàn** trên dữ liệu truy xuất, có **guardrail chống bịa (hallucination)**.
 
-> Phạm vi file này: **chỉ backend Spring Boot (GĐ1)**. NLU dùng **LLM (Gemini)** trả JSON.
-> Semantic Search (GĐ3) — **chưa** trong bản này.
+> Phạm vi file này: backend Spring Boot GĐ1 (MVP) — GĐ2 (PhoBERT) và GĐ3
+> (Recommendation + Semantic rerank) mô tả ở mục dưới, cùng nằm trong backend này.
 
-## Frontend & Giai đoạn 2 (PhoBERT)
+## Frontend, Giai đoạn 2 (PhoBERT) & Giai đoạn 3 (Recommendation + Semantic)
 
 - **`frontend/`** — chat widget React + Vite + TypeScript, gọi thẳng API dưới đây. Xem
   `frontend/README.md`.
@@ -17,6 +17,22 @@ tư vấn dựa **hoàn toàn** trên dữ liệu truy xuất, có **guardrail c
   `POST /nlu` trả intent + entity span. Xem `nlu-service/README.md`. Spring gọi qua
   `PhoBertNluServiceImpl` (@Primary, bước 2.4): timeout 300ms, chết → fallback
   LLM → rule-based; tắt bằng `NLU_ENABLED=false` để về hẳn GĐ1.
+- **Geocoding fallback** (`geocoding/`, TODO.md) — khi bảng `poi` nội bộ miss (POI
+  người dùng nhắc chưa có sẵn), tự động geocode qua OSM Nominatim, validate tọa
+  độ nằm trong Hà Nội rồi cache vào `poi` (`source=geocoded`) — lần hỏi sau cùng
+  POI là hit DB, không tốn API call. Tắt bằng `GEOCODING_ENABLED=false`.
+- **Recommendation Engine** (`service/RecommendationService`, GĐ3 SPEC §12.2) —
+  Content-Based + KNN thuần Java (không cần model ML). Ghi "lượt xem" vào bảng
+  `room_view` khi có `user_id` và người dùng hỏi cụ thể về 1 phòng
+  (room_detail/compare_rooms/calculate_cost). Khi tìm phòng lần sau, nếu đã có
+  ≥2 lượt xem, kết quả được sắp lại theo hồ sơ cá nhân
+  (`meta.ranked_by="personalized"`). Tắt bằng `roomfinder.recommendation.enabled=false`.
+- **Semantic rerank** (`service/SemanticRerankService`, `embedding/`, GĐ3 SPEC §12.1)
+  — embedding tiếng Việt (`keepitreal/vietnamese-sbert` qua `nlu-service:/embed`),
+  kích hoạt khi câu hỏi có từ khóa mô tả định tính ("yên tĩnh", "view", "an ninh"...).
+  Rerank candidate ĐÃ lọc cứng bằng SQL (không bao giờ dùng semantic để filter —
+  §5.1) → `meta.ranked_by="semantic"`. **Không dùng Elasticsearch** — xem lý do ở
+  §8. Tắt bằng `roomfinder.semantic.enabled=false`.
 
 ## 1. Kiến trúc & ánh xạ tới SPEC
 
@@ -31,6 +47,9 @@ Luồng theo §2.1: `NLU → Normalizer → Context (Redis) → Slot Checker →
 | Context MERGE/OVERRIDE/RESET (Redis) | `service/ContextService` | §4 |
 | Slot Checker + Ask Clarifying | `service/ChatOrchestrator` | §4.3 |
 | Retrieval + geo "gần POI" + nới lỏng | `service/RetrievalService`, `repository/RoomRepository` | §5 |
+| Geocoding fallback (POI miss → Nominatim → cache) | `geocoding/GeocodingClient`(+`NominatimGeocodingClient`) | TODO.md |
+| Recommendation Engine (Content-Based + KNN) | `service/RecommendationService`, `domain/RoomView` | §12.2 (GĐ3) |
+| Semantic rerank (embedding, không dùng ES) | `service/SemanticRerankService`, `embedding/EmbeddingClient` | §12.1 (GĐ3) |
 | NLG (RAG) + retry | `service/NlgService` | §6.1–6.3 |
 | **Guardrail chống hallucination** | `service/HallucinationValidator` | §6.4 (DoD-4) |
 | Fast-path (bỏ LLM) | `ChatOrchestrator.canFastPath` | §6.3 |
@@ -136,6 +155,12 @@ mvn test
   `district` riêng — đơn giản hoá cho MVP. Chuyển sang bảng `district` là thay `LocationNormalizer`.
 - **POI alias matching** làm ở Java (số POI nhỏ) thay vì `JSON_CONTAINS` — dễ port, tránh phụ thuộc cú pháp JSON của MySQL.
 - **Elasticsearch/Kafka**: không dùng trong luồng chat đồng bộ (đúng khuyến nghị §9.2). MySQL đủ cho quy mô đồ án; chuyển ES khi > 10.000 phòng (§10.3).
+- **GĐ3 không dùng Elasticsearch cho semantic rerank** (khác SPEC §12.1, vốn giả
+  định "đã có ES trong stack"): catalog thực tế chỉ ~60 phòng — cosine similarity
+  brute-force trong Java trên vector đã cache (`Room.description_vector`) nhanh
+  hơn round-trip tới 1 service ES riêng, tránh thêm hạ tầng chỉ để trang trí.
+  Nếu catalog lớn hơn nhiều (>10.000 phòng, cùng ngưỡng đã áp dụng cho geo ở
+  §10.3), nên chuyển sang ES `dense_vector` như SPEC gốc đề xuất.
 - **book_appointment**: chỉ thu thập tham số & xác nhận, **không** ghi DB (đúng §1.2) — chỗ tích hợp API nghiệp vụ được đánh dấu trong `ChatOrchestrator.handleBooking`.
 
 Việc dự định làm sau (geocoding fallback, routing API, data thật cho ML): xem [TODO.md](TODO.md).
@@ -148,13 +173,17 @@ backend/
 ├── src/main/resources/  application.yml, schema.sql, data.sql
 └── src/main/java/com/roomfinder/chat/
     ├── controller/   ChatController, GlobalExceptionHandler
-    ├── service/      NluService(+Llm/RuleBased), ContextService, RetrievalService,
-    │                 NlgService, HallucinationValidator, ChatOrchestrator
+    ├── service/      NluService(+Llm/RuleBased/PhoBert), ContextService, RetrievalService,
+    │                 NlgService, HallucinationValidator, ChatOrchestrator,
+    │                 RecommendationService, SemanticRerankService (GĐ3)
     ├── normalizer/   Price/DateTime/Location/Utility + EntityNormalizer
     ├── llm/          LlmClient, GeminiClient
-    ├── repository/   Room/Poi/ChatLog
-    ├── domain/       Room, Poi, ChatLog, Intent, RoomType
+    ├── geocoding/    GeocodingClient, NominatimGeocodingClient
+    ├── embedding/    EmbeddingClient, NluEmbeddingClient (GĐ3)
+    ├── repository/   Room/Poi/ChatLog/RoomView
+    ├── domain/       Room, Poi, ChatLog, Intent, RoomType, RoomView
     ├── model/        Filters, NluResult, ChatContext, RetrievalResult, NlgOutcome, ValidationResult
     ├── dto/          ChatRequest/Response, RoomCardDto, MetaDto
-    └── config/       ChatProperties, LlmProperties, WebConfig
+    └── config/       ChatProperties, LlmProperties, NluProperties, GeocodingProperties,
+                      RecommendationProperties, SemanticProperties, WebConfig
 ```

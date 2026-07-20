@@ -3,6 +3,8 @@ package com.roomfinder.chat.service;
 import com.roomfinder.chat.config.ChatProperties;
 import com.roomfinder.chat.domain.Poi;
 import com.roomfinder.chat.domain.Room;
+import com.roomfinder.chat.geocoding.GeocodeResult;
+import com.roomfinder.chat.geocoding.GeocodingClient;
 import com.roomfinder.chat.model.Filters;
 import com.roomfinder.chat.model.RetrievalResult;
 import com.roomfinder.chat.repository.PoiRepository;
@@ -11,6 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.text.Normalizer;
 import java.util.List;
 
@@ -26,22 +29,35 @@ public class RetrievalService {
 
     private final RoomRepository roomRepo;
     private final PoiRepository poiRepo;
+    private final GeocodingClient geocodingClient;
     private final int topK;
     private final int defaultRadius;
 
-    public RetrievalService(RoomRepository roomRepo, PoiRepository poiRepo, ChatProperties props) {
+    public RetrievalService(RoomRepository roomRepo, PoiRepository poiRepo,
+                             GeocodingClient geocodingClient, ChatProperties props) {
         this.roomRepo = roomRepo;
         this.poiRepo = poiRepo;
+        this.geocodingClient = geocodingClient;
         this.topK = props.getTopK();
         this.defaultRadius = props.getDefaultRadiusM();
     }
 
     public RetrievalResult search(Filters f) {
+        return search(f, topK);
+    }
+
+    /**
+     * @param limit số phòng tối đa lấy về — GĐ3: khi có thể cá nhân hóa
+     *              (RecommendationService), ChatOrchestrator truyền limit rộng
+     *              hơn topK để có nhiều ứng viên hơn cho bước rerank, rồi tự
+     *              cắt lại còn topK sau khi rank.
+     */
+    public RetrievalResult search(Filters f, int limit) {
         Poi poi = f.getPoi() != null ? resolvePoi(f.getPoi()) : null;
         double radius = f.getRadiusM() != null ? f.getRadiusM() : defaultRadius;
 
         // Lượt truy vấn gốc (filter cứng)
-        List<Room> base = runQuery(f, poi, radius);
+        List<Room> base = runQuery(f, poi, radius, limit);
         if (!base.isEmpty()) {
             attachDistance(base, poi);
             return RetrievalResult.of(base);
@@ -53,7 +69,7 @@ public class RetrievalService {
             Filters r = f.copy();
             long newMax = Math.round(f.getPriceMax() * 1.15);
             r.setPriceMax(newMax);
-            List<Room> l = runQuery(r, poi, radius);
+            List<Room> l = runQuery(r, poi, radius, limit);
             if (!l.isEmpty()) {
                 attachDistance(l, poi);
                 return RetrievalResult.relaxed(l, "nới giá tối đa lên " + formatVnd(newMax));
@@ -61,7 +77,7 @@ public class RetrievalService {
         }
         // 2) Nới bán kính gấp đôi (chỉ khi tìm theo POI)
         if (poi != null) {
-            List<Room> l = runQuery(f, poi, radius * 2);
+            List<Room> l = runQuery(f, poi, radius * 2, limit);
             if (!l.isEmpty()) {
                 attachDistance(l, poi);
                 return RetrievalResult.relaxed(l, "mở rộng bán kính lên " + (int) (radius * 2) + "m");
@@ -71,7 +87,7 @@ public class RetrievalService {
         if (f.getUtilities() != null && !f.getUtilities().isEmpty()) {
             Filters r = f.copy();
             r.getUtilities().clear();
-            List<Room> l = runQuery(r, poi, poi != null ? radius * 2 : radius);
+            List<Room> l = runQuery(r, poi, poi != null ? radius * 2 : radius, limit);
             if (!l.isEmpty()) {
                 attachDistance(l, poi);
                 return RetrievalResult.relaxed(l, "bỏ bớt yêu cầu tiện ích");
@@ -94,7 +110,7 @@ public class RetrievalService {
 
     // --- Helpers ---------------------------------------------------------
 
-    private List<Room> runQuery(Filters f, Poi poi, double radius) {
+    private List<Room> runQuery(Filters f, Poi poi, double radius, int limit) {
         Boolean hasAc = f.hasUtility("air_conditioner") ? Boolean.TRUE : null;
         Boolean hasParking = f.hasUtility("parking") ? Boolean.TRUE : null;
         Boolean hasWifi = f.hasUtility("wifi") ? Boolean.TRUE : null;
@@ -103,19 +119,39 @@ public class RetrievalService {
         if (poi != null) {
             return roomRepo.searchByGeo(f.getPriceMin(), f.getPriceMax(), f.getAreaMin(),
                     hasAc, hasParking, hasWifi, hasWashing, f.getRoomType(),
-                    poi.getLatitude().doubleValue(), poi.getLongitude().doubleValue(), radius, topK);
+                    poi.getLatitude().doubleValue(), poi.getLongitude().doubleValue(), radius, limit);
         }
         return roomRepo.searchByFilters(f.getPriceMin(), f.getPriceMax(), f.getLocation(),
-                f.getAreaMin(), hasAc, hasParking, hasWifi, hasWashing, f.getRoomType(), topK);
+                f.getAreaMin(), hasAc, hasParking, hasWifi, hasWashing, f.getRoomType(), limit);
     }
 
-    /** Khớp span POI với name/aliases của bảng poi (không dấu, contains). */
+    /**
+     * Khớp span POI với name/aliases của bảng poi (không dấu, contains).
+     * Miss trong bảng nội bộ → geocode + cache (TODO.md "Tầng 2") thay vì
+     * bó tay ngay — bảng poi tự lớn dần theo nhu cầu thật của người dùng.
+     */
     private Poi resolvePoi(String span) {
         String needle = strip(span);
-        return poiRepo.findAll().stream()
+        Poi found = poiRepo.findAll().stream()
                 .filter(p -> matchesPoi(p, needle))
                 .findFirst()
                 .orElse(null);
+        return found != null ? found : geocodeAndCache(span);
+    }
+
+    private Poi geocodeAndCache(String span) {
+        GeocodeResult r = geocodingClient.geocode(span + ", Hà Nội, Việt Nam");
+        if (r == null) return null;
+
+        Poi poi = new Poi();
+        poi.setName(span.trim());
+        poi.setType("geocoded");
+        poi.setLatitude(BigDecimal.valueOf(r.latitude()));
+        poi.setLongitude(BigDecimal.valueOf(r.longitude()));
+        poi.setSource("geocoded");
+        Poi saved = poiRepo.save(poi);
+        log.info("Geocode + cache POI mới: '{}' -> ({}, {})", span, r.latitude(), r.longitude());
+        return saved;
     }
 
     private boolean matchesPoi(Poi p, String needle) {

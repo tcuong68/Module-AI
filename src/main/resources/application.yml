@@ -56,6 +56,17 @@ roomfinder:
     enabled: ${NLU_ENABLED:true}
     url: ${NLU_URL:http://localhost:8000}
     timeout-ms: 300
+  # Geocoding fallback (TODO.md "Tầng 2") — khi bảng poi nội bộ miss.
+  # OSM Nominatim, miễn phí; enabled=false để tắt hẳn (POI lạ sẽ luôn miss).
+  geocoding:
+    enabled: ${GEOCODING_ENABLED:true}
+    base-url: https://nominatim.openstreetmap.org
+    timeout-ms: 3000
+    user-agent: "RoomFinderChatbot-Thesis/1.0"
+    min-lat: 20.55
+    max-lat: 21.40
+    min-lon: 105.25
+    max-lon: 106.05
   llm:
     provider: gemini
     gemini:

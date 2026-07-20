@@ -29,4 +29,7 @@ public class Poi {
     private String type;
     private BigDecimal latitude;
     private BigDecimal longitude;
+
+    /** "manual" (nhập tay, seed) | "geocoded" (tự động qua Nominatim — TODO.md Tầng 2). */
+    private String source = "manual";
 }

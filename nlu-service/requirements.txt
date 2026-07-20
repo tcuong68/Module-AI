@@ -5,3 +5,5 @@ transformers>=4.40
 py_vncorenlp>=0.1.4
 fastapi>=0.111
 uvicorn>=0.30
+# Embedding cho semantic rerank (GĐ3, SPEC §12.1) — vietnamese-sbert.
+sentence-transformers>=3.0

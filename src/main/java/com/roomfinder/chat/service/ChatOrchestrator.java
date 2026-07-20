@@ -2,9 +2,12 @@ package com.roomfinder.chat.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.roomfinder.chat.config.ChatProperties;
+import com.roomfinder.chat.config.RecommendationProperties;
+import com.roomfinder.chat.config.SemanticProperties;
 import com.roomfinder.chat.domain.ChatLog;
 import com.roomfinder.chat.domain.Intent;
 import com.roomfinder.chat.domain.Room;
+import com.roomfinder.chat.domain.RoomView;
 import com.roomfinder.chat.dto.ChatRequest;
 import com.roomfinder.chat.dto.ChatResponse;
 import com.roomfinder.chat.dto.MetaDto;
@@ -17,6 +20,7 @@ import com.roomfinder.chat.model.RetrievalResult;
 import com.roomfinder.chat.normalizer.EntityNormalizer;
 import com.roomfinder.chat.repository.ChatLogRepository;
 import com.roomfinder.chat.repository.RoomRepository;
+import com.roomfinder.chat.repository.RoomViewRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -38,6 +42,16 @@ public class ChatOrchestrator {
     private static final List<String> ADVISORY_CUES = List.of(
             "nên", "tư vấn", "so sánh", "vì sao", "tại sao", "cái nào tốt hơn", "tốt hơn", "gợi ý", "khuyên");
     private static final List<String> CHEAPER_CUES = List.of("rẻ hơn", "giảm giá", "hạ giá", "rẻ nữa");
+    /**
+     * Từ khóa mô tả định tính — kích hoạt semantic rerank (§12.1). Câu tìm
+     * phòng THUẦN cấu trúc ("dưới 3 triệu ở Thanh Xuân") không có gì để
+     * semantic phân biệt (mọi candidate đã khớp filter như nhau) nên bỏ qua,
+     * nhường chỗ cho personalization/thứ tự mặc định.
+     */
+    private static final List<String> DESCRIPTIVE_CUES = List.of(
+            "yên tĩnh", "thoáng", "sôi động", "yên bình", "mới xây", "an ninh",
+            "sạch sẽ", "rộng rãi", "đẹp", "riêng tư", "view", "ban công",
+            "gần chợ", "gần công viên", "ồn");
 
     private final NluService nluService;
     private final EntityNormalizer normalizer;
@@ -45,23 +59,37 @@ public class ChatOrchestrator {
     private final RetrievalService retrievalService;
     private final NlgService nlgService;
     private final RoomRepository roomRepo;
+    private final RoomViewRepository roomViewRepo;
+    private final RecommendationService recommendationService;
+    private final SemanticRerankService semanticRerankService;
     private final ChatLogRepository chatLogRepo;
     private final ObjectMapper mapper;
     private final ChatProperties props;
+    private final RecommendationProperties recommendationProps;
+    private final SemanticProperties semanticProps;
 
     public ChatOrchestrator(NluService nluService, EntityNormalizer normalizer,
                             ContextService contextService, RetrievalService retrievalService,
                             NlgService nlgService, RoomRepository roomRepo,
-                            ChatLogRepository chatLogRepo, ObjectMapper mapper, ChatProperties props) {
+                            RoomViewRepository roomViewRepo, RecommendationService recommendationService,
+                            SemanticRerankService semanticRerankService,
+                            ChatLogRepository chatLogRepo, ObjectMapper mapper, ChatProperties props,
+                            RecommendationProperties recommendationProps,
+                            SemanticProperties semanticProps) {
         this.nluService = nluService;
         this.normalizer = normalizer;
         this.contextService = contextService;
         this.retrievalService = retrievalService;
         this.nlgService = nlgService;
         this.roomRepo = roomRepo;
+        this.roomViewRepo = roomViewRepo;
+        this.recommendationService = recommendationService;
+        this.semanticRerankService = semanticRerankService;
         this.chatLogRepo = chatLogRepo;
         this.mapper = mapper;
         this.props = props;
+        this.recommendationProps = recommendationProps;
+        this.semanticProps = semanticProps;
     }
 
     public ChatResponse handle(ChatRequest req) {
@@ -129,8 +157,41 @@ public class ChatOrchestrator {
                     "CLARIFY", false, nlu.getConfidence(), false, t0);
         }
 
-        RetrievalResult rr = retrievalService.search(af);
-        List<Room> rooms = rr.getRooms();
+        // GĐ3: khi có thể rerank (semantic và/hoặc personalization), lấy candidate
+        // pool rộng hơn topK — nếu không, luôn có đúng topK phòng nên rerank vô
+        // nghĩa (không có gì để sắp xếp lại).
+        boolean canPersonalize = ctx.getUserId() != null && recommendationProps.isEnabled();
+        boolean wantsSemantic = semanticProps.isEnabled() && containsAny(message, DESCRIPTIVE_CUES);
+        int poolLimit = (canPersonalize || wantsSemantic)
+                ? props.getTopK() * recommendationProps.getCandidatePoolMultiplier()
+                : props.getTopK();
+
+        RetrievalResult rr = retrievalService.search(af, poolLimit);
+        List<Room> pool = rr.getRooms();
+
+        String rankedBy = af.getPoi() != null ? "distance" : "price";
+        List<Room> rooms = pool;
+        if (pool.size() > props.getTopK()) {
+            // Ưu tiên semantic (phản ánh đúng câu hỏi hiện tại) trước
+            // personalization — chỉ 1 trong 2 áp dụng, không blend điểm số
+            // (giữ đơn giản, xem README).
+            List<Room> reranked = wantsSemantic ? semanticRerankService.rerank(message, pool) : null;
+            if (reranked != null) {
+                rooms = reranked.stream().limit(props.getTopK()).toList();
+                rankedBy = "semantic";
+            } else if (canPersonalize) {
+                List<Room> personalized = recommendationService.rank(ctx.getUserId(), pool);
+                if (personalized != null) {
+                    rooms = personalized.stream().limit(props.getTopK()).toList();
+                    rankedBy = "personalized";
+                } else {
+                    rooms = pool.stream().limit(props.getTopK()).toList();
+                }
+            } else {
+                rooms = pool.stream().limit(props.getTopK()).toList();
+            }
+        }
+
         ctx.setLastResultIds(rooms.stream().map(Room::getId).toList());
 
         boolean advisory = containsAny(message, ADVISORY_CUES);
@@ -165,7 +226,7 @@ public class ChatOrchestrator {
         contextService.save(ctx);
         logTurn(sessionId, message, nlu, rooms, path, hallucination, t0);
         return build(sessionId, reply, nlu.getIntent(), cards(rooms), af,
-                path, rr.isRelaxed(), nlu.getConfidence(), hallucination, t0);
+                path, rr.isRelaxed(), nlu.getConfidence(), hallucination, rankedBy, t0);
     }
 
     // --- ROOM_DETAIL -----------------------------------------------------
@@ -184,6 +245,7 @@ public class ChatOrchestrator {
                 "Phòng [#%d] — %s. Giá %,dđ/tháng, diện tích %sm², tại %s. Điều hòa: %s, chỗ để xe: %s.",
                 r.getId(), r.getTitle(), r.getPrice(), r.getArea(),
                 r.getAddressText(), yn(r.getHasAirConditioner()), yn(r.getHasParking()));
+        logRoomViews(ctx, refs);
         contextService.save(ctx);
         logTurn(sessionId, nlu != null ? nlu.getIntent().getCode() : "", nlu, refs, "FAST", false, t0);
         return build(sessionId, reply, nlu.getIntent(), cards(refs), ctx.getActiveFilters(),
@@ -211,6 +273,7 @@ public class ChatOrchestrator {
                     r.getId(), r.getPrice(), r.getArea(), r.getDistrict(),
                     yn(r.getHasAirConditioner()), yn(r.getHasParking())));
         }
+        logRoomViews(ctx, refs);
         contextService.save(ctx);
         logTurn(sessionId, "compare", nlu, refs, "FAST", false, t0);
         return build(sessionId, sb.toString().trim(), nlu.getIntent(), cards(refs),
@@ -237,6 +300,7 @@ public class ChatOrchestrator {
         String reply = String.format(
                 "Ước tính chi phí/tháng cho phòng [#%d]: tiền phòng %,dđ + điện ~%,dđ + nước ~%,dđ + dịch vụ ~%,dđ ≈ %,dđ.",
                 r.getId(), r.getPrice(), dien, nuoc, dichVu, tong);
+        logRoomViews(ctx, refs);
         contextService.save(ctx);
         logTurn(sessionId, "calculate_cost", nlu, refs, "FAST", false, t0);
         return build(sessionId, reply, nlu.getIntent(), cards(refs), ctx.getActiveFilters(),
@@ -355,6 +419,12 @@ public class ChatOrchestrator {
     private ChatResponse build(String sessionId, String reply, Intent intent, List<RoomCardDto> rooms,
                                Filters af, String path, boolean relaxed, double conf,
                                boolean hallucination, long t0) {
+        return build(sessionId, reply, intent, rooms, af, path, relaxed, conf, hallucination, null, t0);
+    }
+
+    private ChatResponse build(String sessionId, String reply, Intent intent, List<RoomCardDto> rooms,
+                               Filters af, String path, boolean relaxed, double conf,
+                               boolean hallucination, String rankedBy, long t0) {
         return ChatResponse.builder()
                 .sessionId(sessionId)
                 .reply(reply)
@@ -367,8 +437,21 @@ public class ChatOrchestrator {
                         .latencyMs(System.currentTimeMillis() - t0)
                         .nluConfidence(conf)
                         .hallucinationDetected(hallucination)
+                        .rankedBy(rankedBy)
                         .build())
                 .build();
+    }
+
+    /** GĐ3: ghi lượt "xem phòng" khi có userId — hồ sơ cho RecommendationService. */
+    private void logRoomViews(ChatContext ctx, List<Room> rooms) {
+        if (ctx.getUserId() == null || rooms == null || rooms.isEmpty()) return;
+        try {
+            for (Room r : rooms) {
+                roomViewRepo.save(new RoomView(ctx.getUserId(), r.getId()));
+            }
+        } catch (Exception e) {
+            log.warn("Ghi room_view lỗi: {}", e.getMessage());
+        }
     }
 
     private void logTurn(String sessionId, String message, NluResult nlu, List<Room> rooms,
